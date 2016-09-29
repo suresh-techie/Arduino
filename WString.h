@@ -58,7 +58,6 @@ public:
 	// be false).
 	String(const char *cstr = "");
 	String(const String &str);
-	String(const __FlashStringHelper *str);
 	#ifdef __GXX_EXPERIMENTAL_CXX0X__
 	String(String &&rval);
 	String(StringSumHelper &&rval);
@@ -69,8 +68,6 @@ public:
 	explicit String(unsigned int, unsigned char base=10);
 	explicit String(long, unsigned char base=10);
 	explicit String(unsigned long, unsigned char base=10);
-	explicit String(float, unsigned char decimalPlaces=2);		
-	explicit String(double, unsigned char decimalPlaces=2);
 	~String(void);
 
 	// memory management
@@ -85,7 +82,6 @@ public:
 	// marked as invalid ("if (s)" will be false).
 	String & operator = (const String &rhs);
 	String & operator = (const char *cstr);
-	String & operator = (const __FlashStringHelper *str);
 	#ifdef __GXX_EXPERIMENTAL_CXX0X__
 	String & operator = (String &&rval);
 	String & operator = (StringSumHelper &&rval);
@@ -104,10 +100,7 @@ public:
 	unsigned char concat(unsigned int num);
 	unsigned char concat(long num);
 	unsigned char concat(unsigned long num);
-	unsigned char concat(float num);		
-	unsigned char concat(double num);		
-	unsigned char concat(const __FlashStringHelper * str);		
-	
+
 	// if there's not enough memory for the concatenated value, the string
 	// will be left unchanged (but this isn't signalled in any way)
 	String & operator += (const String &rhs)	{concat(rhs); return (*this);}
@@ -118,13 +111,19 @@ public:
 	String & operator += (unsigned int num)		{concat(num); return (*this);}
 	String & operator += (long num)			{concat(num); return (*this);}
 	String & operator += (unsigned long num)	{concat(num); return (*this);}
-	String & operator += (float num)		{concat(num); return (*this);}		
-	String & operator += (double num)		{concat(num); return (*this);}		
-	String & operator += (const __FlashStringHelper *str){concat(str); return (*this);}
 
 
-	
-	
+	// Implement StringAdditionOperator per Arduino docs... String + __
+	String operator + (const String &rhs)	{return String(*this) += rhs;}
+	String operator + (const char *cstr)	{return String(*this) += cstr;}
+	String operator + (char c)		{return String(*this) += c;}
+	String operator + (unsigned char num)	{return String(*this) += num;}
+	String operator + (int num)		{return String(*this) += num;}
+	String operator + (unsigned int num)	{return String(*this) += num;}
+	String operator + (long num)		{return String(*this) += num;}
+	String operator + (unsigned long num)	{return String(*this) += num;}
+
+#if 0
 	friend StringSumHelper & operator + (const StringSumHelper &lhs, const String &rhs);
 	friend StringSumHelper & operator + (const StringSumHelper &lhs, const char *cstr);
 	friend StringSumHelper & operator + (const StringSumHelper &lhs, char c);
@@ -133,10 +132,7 @@ public:
 	friend StringSumHelper & operator + (const StringSumHelper &lhs, unsigned int num);
 	friend StringSumHelper & operator + (const StringSumHelper &lhs, long num);
 	friend StringSumHelper & operator + (const StringSumHelper &lhs, unsigned long num);
-	friend StringSumHelper & operator + (const StringSumHelper &lhs, float num);		
-	friend StringSumHelper & operator + (const StringSumHelper &lhs, double num);		
-	friend StringSumHelper & operator + (const StringSumHelper &lhs, const __FlashStringHelper *rhs);
-
+#endif
 
 	// comparison (only works w/ Strings and "strings")
 	operator StringIfHelperType() const { return buffer ? &String::StringIfHelper : 0; }
@@ -164,7 +160,6 @@ public:
 	void getBytes(unsigned char *buf, unsigned int bufsize, unsigned int index=0) const;
 	void toCharArray(char *buf, unsigned int bufsize, unsigned int index=0) const
 		{getBytes((unsigned char *)buf, bufsize, index);}
-	const char * c_str() const { return buffer; }
 
 	// search
 	int indexOf( char ch ) const;
@@ -181,20 +176,19 @@ public:
 	// modification
 	void replace(char find, char replace);
 	void replace(const String& find, const String& replace);
-	void remove(unsigned int index);		
-	void remove(unsigned int index, unsigned int count);
 	void toLowerCase(void);
 	void toUpperCase(void);
 	void trim(void);
 
 	// parsing/conversion
 	long toInt(void) const;
-	float toFloat(void) const;
-protected:
+	char * getCSpec(int base, bool issigned, bool islong);
+
 	char *buffer;	        // the actual char array
 	unsigned int capacity;  // the array length minus one (for the '\0')
 	unsigned int len;       // the String length (not counting the '\0')
-protected:
+	unsigned char flags;    // unused, for future features
+
 	void init(void);
 	void invalidate(void);
 	unsigned char changeBuffer(unsigned int maxStrLen);
@@ -202,11 +196,9 @@ protected:
 
 	// copy and move
 	String & copy(const char *cstr, unsigned int length);
-	String & copy(const __FlashStringHelper *pstr, unsigned int length);
 	#ifdef __GXX_EXPERIMENTAL_CXX0X__
 	void move(String &rhs);
 	#endif
-	
 };
 
 class StringSumHelper : public String
@@ -220,8 +212,6 @@ public:
 	StringSumHelper(unsigned int num) : String(num) {}
 	StringSumHelper(long num) : String(num) {}
 	StringSumHelper(unsigned long num) : String(num) {}
-	StringSumHelper(float num) : String(num) {}		
-	StringSumHelper(double num) : String(num) {}
 };
 
 #endif  // __cplusplus
